@@ -2,38 +2,41 @@
 
 Free GRE Quant practice platform focused on Latin America and low-income contexts.
 
-Current version includes:
+This repo is public and safe to share if secrets stay only in local/hosting env vars.
 
-- bilingual UI (`es`/`en`)
-- customizable timed quizzes
-- optional auth + guest mode
-- progress dashboard
-- item-level feedback
-- Supabase-backed API + RLS
+## Start Here
 
-## Public Repo Status
+If you are new to the project, read these files in order:
 
-This repository is safe to publish if you keep secrets in local/env hosting variables only.
+1. `docs/HANDOFF_NOTE.md` - one-page context for a new conversation
+2. `docs/PROJECT_BRIEF.md` - vision, scope, success criteria, current status
+3. `docs/ROADMAP.md` - what to build next (priority order)
+4. `docs/ARCHITECTURE.md` - routes, APIs, data model, security boundaries
+5. `docs/RUNBOOK.md` - exact technical steps (local, Supabase, deploy)
+6. `docs/CONTENT_OPERATIONS.md` - question pipeline + social outreach workflow
 
-Never commit:
+## Current Product Scope (V1)
 
-- `.env.local`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- any `sb_secret_*` key
-- production tokens
+- Bilingual UI (`es` / `en`)
+- English question content with EN + ES explanations
+- Customizable timed quizzes
+- Optional login + guest mode
+- Progress dashboard
+- Item-level feedback
+- Supabase backend with RLS
 
 ## Tech Stack
 
 - Next.js (App Router)
 - TypeScript
 - Supabase (Auth + Postgres + RLS)
-- Vercel-compatible serverless routes
+- Vercel-compatible route handlers
 
 ## Quick Start
 
 1. Install Node.js `20+`
 2. Copy `.env.example` to `.env.local`
-3. Fill required env vars:
+3. Fill:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
@@ -42,11 +45,11 @@ SUPABASE_SERVICE_ROLE_KEY=
 ADMIN_API_KEY=
 ```
 
-4. Create database objects in Supabase SQL Editor with:
+4. Run SQL schema in Supabase:
 
 - `supabase/schema.sql`
 
-5. Run locally:
+5. Run app:
 
 ```bash
 npm install
@@ -59,12 +62,13 @@ Open `http://localhost:3000`.
 
 ## Scripts
 
-- `npm run dev` - local app
-- `npm run build` - production build
-- `npm run lint` - lint checks
-- `npm run validate:bank` - question bank validation
-- `npm run import:questions` - import question bank into Supabase
-- `npm run test:content` - content validation tests
+- `npm run dev`
+- `npm run build`
+- `npm run lint`
+- `npm run validate:bank`
+- `npm run import:questions`
+- `npm run test:content`
+- `npm run security:scan`
 
 ## API Endpoints (V1)
 
@@ -72,25 +76,18 @@ Open `http://localhost:3000`.
 - `POST /api/attempt/submit`
 - `GET /api/progress/summary`
 - `POST /api/item-feedback`
+- `GET|PATCH /api/admin/questions`
 
-## Question Contribution Policy
+## Non-negotiables
 
-- Only original questions are accepted.
-- No ETS/Magoosh/Kaplan/Manhattan copied content.
-- All submissions require:
-  - stem
-  - choices A-E
-  - one correct choice
-  - explanation in EN + ES
-  - topic/subtopic/difficulty
-  - authorship statement
-
-See `CONTRIBUTING.md` for details.
+- Only original questions (`source_type=original`)
+- No copied/adapted ETS or commercial prep content
+- Do not expose `SUPABASE_SERVICE_ROLE_KEY` in client-side code
 
 ## Legal Notice
 
-This project is an independent educational tool and is not affiliated with ETS.
-It does not provide official GRE scoring equivalence.
+This is an independent educational project.
+It is not affiliated with ETS and does not provide official GRE score equivalence.
 
 ## License
 
