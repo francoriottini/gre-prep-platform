@@ -9,3 +9,4 @@ dist
 *.log
 .vercel
 .DS_Store
+docs/PRIVATE_STEP_BY_STEP.md
