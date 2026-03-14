@@ -10,7 +10,7 @@ This project aims to become a free, high-quality, legally safe GRE prep platform
 
 - Working web app flow: quiz builder -> timed quiz -> results -> progress
 - Supabase schema + RLS
-- Basic admin endpoint for review status updates
+- Admin access now uses authenticated membership via `admin_users`
 - Question validation + import scripts
 - Security scan script
 

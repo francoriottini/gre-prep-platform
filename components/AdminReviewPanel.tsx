@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { authFetch } from "@/lib/api-client";
 
 type AdminQuestion = {
   id: string;
@@ -16,7 +17,6 @@ type AdminQuestion = {
 };
 
 export function AdminReviewPanel() {
-  const [apiKey, setApiKey] = useState("");
   const [status, setStatus] = useState<"draft" | "reviewed" | "published">("draft");
   const [items, setItems] = useState<AdminQuestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,14 +25,14 @@ export function AdminReviewPanel() {
   const loadItems = async () => {
     setError(null);
     setLoading(true);
+
     try {
-      const response = await fetch(`/api/admin/questions?status=${status}`, {
-        headers: { "x-admin-key": apiKey }
-      });
+      const response = await authFetch(`/api/admin/questions?status=${status}`);
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error ?? "Failed to fetch admin list");
       }
+
       const body = await response.json();
       setItems(body.items ?? []);
     } catch (err) {
@@ -44,19 +44,21 @@ export function AdminReviewPanel() {
 
   const updateStatus = async (id: string, nextStatus: AdminQuestion["status"]) => {
     setError(null);
+
     try {
-      const response = await fetch("/api/admin/questions", {
+      const response = await authFetch("/api/admin/questions", {
         method: "PATCH",
         headers: {
-          "content-type": "application/json",
-          "x-admin-key": apiKey
+          "content-type": "application/json"
         },
         body: JSON.stringify({ id, status: nextStatus })
       });
+
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error ?? "Failed to update item");
       }
+
       setItems((prev) =>
         prev.map((item) => (item.id === id ? { ...item, status: nextStatus } : item))
       );
@@ -69,10 +71,7 @@ export function AdminReviewPanel() {
     <section className="stack">
       <article className="card stack">
         <h2>Admin Review</h2>
-        <label>
-          <span>Admin API key</span>
-          <input value={apiKey} onChange={(event) => setApiKey(event.target.value)} />
-        </label>
+        <p>Sign in with an account present in the `admin_users` table.</p>
         <label>
           <span>Status filter</span>
           <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>

@@ -42,12 +42,12 @@ If you are new to the project, read these files in order:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-ADMIN_API_KEY=
 ```
 
 4. Run SQL schema in Supabase:
 
 - `supabase/schema.sql`
+- If your project already existed, also run `supabase/2026-03-14-security-hardening.sql`
 
 5. Run app:
 
@@ -83,6 +83,7 @@ Open `http://localhost:3000`.
 - Only original questions (`source_type=original`)
 - No copied/adapted ETS or commercial prep content
 - Do not expose `SUPABASE_SERVICE_ROLE_KEY` in client-side code
+- Admin access is granted through `admin_users`, not a shared browser key
 
 ## Legal Notice
 

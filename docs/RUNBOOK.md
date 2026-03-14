@@ -15,7 +15,6 @@ Fill `.env.local`:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-ADMIN_API_KEY=
 ```
 
 Run:
@@ -30,13 +29,16 @@ npm run dev
 
 1. Open Supabase project
 2. SQL Editor -> run `supabase/schema.sql`
-3. Auth -> URL configuration:
+3. If your database already existed before the security refactor, also run `supabase/2026-03-14-security-hardening.sql`
+4. Auth -> URL configuration:
    - Site URL: `http://localhost:3000`
    - Redirect URLs: `http://localhost:3000/**`
-4. API keys:
+5. API keys:
    - `NEXT_PUBLIC_SUPABASE_URL` <- Project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` <- publishable/anon key
    - `SUPABASE_SERVICE_ROLE_KEY` <- secret or service role key
+6. Grant admin access:
+   - insert your auth user id into `public.admin_users`
 
 ## 3) Pre-publish Security Checks
 

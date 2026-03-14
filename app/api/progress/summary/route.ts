@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUserId } from "@/lib/auth";
-import { createSupabaseServiceClient } from "@/lib/supabase-server";
+import { getAuthenticatedRequest } from "@/lib/auth";
+import { createSupabaseUserServerClient } from "@/lib/supabase-server";
 import type { ProgressSummaryResponse } from "@/lib/types";
 
 export async function GET(request: Request) {
   try {
-    const userId = await getAuthenticatedUserId(request.headers);
-    if (!userId) {
+    const auth = await getAuthenticatedRequest(request.headers);
+    if (!auth) {
       const guestResponse: ProgressSummaryResponse = {
         mode: "guest",
         overall: null,
@@ -16,20 +16,20 @@ export async function GET(request: Request) {
       return NextResponse.json(guestResponse, { status: 200 });
     }
 
-    const supabase = createSupabaseServiceClient();
+    const supabase = createSupabaseUserServerClient(auth.accessToken);
 
     const [{ data: attempts, error: attemptsError }, { data: snapshots, error: snapshotsError }] =
       await Promise.all([
         supabase
           .from("quiz_attempts")
           .select("score_accuracy, avg_time_seconds, submitted_at")
-          .eq("user_id", userId)
+          .eq("user_id", auth.userId)
           .order("submitted_at", { ascending: false })
           .limit(300),
         supabase
           .from("mastery_snapshots")
           .select("topic, questions_answered, accuracy, avg_time_seconds, snapshot_week")
-          .eq("user_id", userId)
+          .eq("user_id", auth.userId)
           .order("snapshot_week", { ascending: false })
           .limit(500)
       ]);

@@ -14,7 +14,7 @@
 - `/results` - answer review + feedback
 - `/dashboard` - progress summary
 - `/login` - optional magic-link auth
-- `/admin` - lightweight review UI (admin key protected endpoint)
+- `/admin` - review UI for authenticated users present in `admin_users`
 
 ## API Routes
 
@@ -36,7 +36,7 @@
   - Output: insert acknowledgement
 
 - `GET|PATCH /api/admin/questions`
-  - Admin list/update endpoint via `x-admin-key`
+  - Admin list/update endpoint gated by authenticated admin membership
 
 ## Core Tables
 
@@ -46,6 +46,7 @@
 - `user_profiles`
 - `mastery_snapshots`
 - `item_feedback`
+- `admin_users`
 
 See `supabase/schema.sql` for full constraints, indexes, and policies.
 
@@ -64,6 +65,7 @@ See `supabase/schema.sql` for full constraints, indexes, and policies.
 - `SUPABASE_SERVICE_ROLE_KEY` is server-only
 - Browser client uses public key only
 - `questions` table client access is blocked by RLS policies
+- User-specific writes now run through JWT-backed server clients where possible
 
 ## Known Technical Debt
 

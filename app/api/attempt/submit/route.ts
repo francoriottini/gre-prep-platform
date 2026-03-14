@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUserId } from "@/lib/auth";
+import { getAuthenticatedRequest } from "@/lib/auth";
 import { toWeekStart } from "@/lib/quiz";
-import { createSupabaseServiceClient } from "@/lib/supabase-server";
+import { createSupabaseServiceClient, createSupabaseUserServerClient } from "@/lib/supabase-server";
 import type { SubmitAttemptResponse } from "@/lib/types";
 import { submitAttemptSchema } from "@/lib/validation";
 
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
     const { data: questionRows, error: questionError } = await supabase
       .from("questions")
       .select("id, correct_choice, explanation_en, explanation_es, topic, subtopic")
+      .eq("status", "published")
       .in("id", answerIds);
 
     if (questionError) {
@@ -78,13 +79,15 @@ export async function POST(request: Request) {
 
     let saved = false;
     let attemptId: string | null = null;
-    const userId = await getAuthenticatedUserId(request.headers);
+    const auth = await getAuthenticatedRequest(request.headers);
 
-    if (userId) {
-      const { data: attempt, error: attemptError } = await supabase
+    if (auth) {
+      const userSupabase = createSupabaseUserServerClient(auth.accessToken);
+
+      const { data: attempt, error: attemptError } = await userSupabase
         .from("quiz_attempts")
         .insert({
-          user_id: userId,
+          user_id: auth.userId,
           section: "quant",
           requested_filters: payload.requested_filters,
           time_limit_seconds: payload.time_limit_seconds,
@@ -107,7 +110,7 @@ export async function POST(request: Request) {
           time_spent_seconds: item.time_spent_seconds
         }));
 
-        const { error: itemError } = await supabase.from("attempt_items").insert(itemRows);
+        const { error: itemError } = await userSupabase.from("attempt_items").insert(itemRows);
         if (!itemError) {
           saved = true;
           const weekStart = toWeekStart();
@@ -132,10 +135,10 @@ export async function POST(request: Request) {
           }
 
           for (const group of groupMap.values()) {
-            const { data: existing } = await supabase
+            const { data: existing } = await userSupabase
               .from("mastery_snapshots")
               .select("id, questions_answered, accuracy, avg_time_seconds")
-              .eq("user_id", userId)
+              .eq("user_id", auth.userId)
               .eq("topic", group.topic)
               .eq("subtopic", group.subtopic)
               .eq("snapshot_week", weekStart)
@@ -152,10 +155,10 @@ export async function POST(request: Request) {
             const nextTotalTime = existingTotalTime + group.totalTime;
             const nextAvgTime = nextAnswered ? Number((nextTotalTime / nextAnswered).toFixed(2)) : 0;
 
-            await supabase.from("mastery_snapshots").upsert(
+            await userSupabase.from("mastery_snapshots").upsert(
               {
                 id: existing?.id,
-                user_id: userId,
+                user_id: auth.userId,
                 topic: group.topic,
                 subtopic: group.subtopic,
                 questions_answered: nextAnswered,

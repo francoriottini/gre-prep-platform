@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
 import { authFetch } from "@/lib/api-client";
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import type { SubmitAttemptResponse } from "@/lib/types";
 
 const LAST_RESULT_KEY = "gre_latam_last_result_v1";
@@ -24,6 +26,7 @@ export function ResultsReview() {
   const [result, setResult] = useState<SubmitAttemptResponse | null>(null);
   const [feedbackDrafts, setFeedbackDrafts] = useState<Record<string, FeedbackDraft>>({});
   const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
+  const [canSendFeedback, setCanSendFeedback] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,11 +42,34 @@ export function ResultsReview() {
     }
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    const supabase = getSupabaseBrowserClient();
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) {
+        return;
+      }
+      setCanSendFeedback(Boolean(data.session?.user));
+    });
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCanSendFeedback(Boolean(session?.user));
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const summaryText = useMemo(() => {
     if (!result) {
       return null;
     }
-    return `${result.summary.correct_answers}/${result.summary.total_questions} • ${tr("accuracy")}: ${result.summary.accuracy}% • ${tr("avgTime")}: ${result.summary.avg_time_seconds}s`;
+    return `${result.summary.correct_answers}/${result.summary.total_questions} | ${tr("accuracy")}: ${result.summary.accuracy}% | ${tr("avgTime")}: ${result.summary.avg_time_seconds}s`;
   }, [result, tr]);
 
   const getDraft = (questionId: string): FeedbackDraft => feedbackDrafts[questionId] ?? defaultDraft;
@@ -131,58 +157,73 @@ export function ResultsReview() {
             </p>
 
             <div className="feedback-box stack">
-              <label>
-                <span>{tr("feedback")}</span>
-                <select
-                  value={draft.feedback_type}
-                  onChange={(e) =>
-                    updateDraft(item.question_id, {
-                      feedback_type: e.target.value as FeedbackDraft["feedback_type"]
-                    })
-                  }
-                >
-                  <option value="other">Other</option>
-                  <option value="error">Error</option>
-                  <option value="ambiguous">Ambiguous</option>
-                  <option value="too_easy">Too easy</option>
-                  <option value="too_hard">Too hard</option>
-                </select>
-              </label>
+              {canSendFeedback ? (
+                <>
+                  <label>
+                    <span>{tr("feedback")}</span>
+                    <select
+                      value={draft.feedback_type}
+                      onChange={(e) =>
+                        updateDraft(item.question_id, {
+                          feedback_type: e.target.value as FeedbackDraft["feedback_type"]
+                        })
+                      }
+                    >
+                      <option value="other">{tr("feedbackOther")}</option>
+                      <option value="error">{tr("feedbackError")}</option>
+                      <option value="ambiguous">{tr("feedbackAmbiguous")}</option>
+                      <option value="too_easy">{tr("feedbackTooEasy")}</option>
+                      <option value="too_hard">{tr("feedbackTooHard")}</option>
+                    </select>
+                  </label>
 
-              <label>
-                <span>Comment</span>
-                <textarea
-                  rows={2}
-                  value={draft.comment}
-                  onChange={(e) => updateDraft(item.question_id, { comment: e.target.value })}
-                />
-              </label>
+                  <label>
+                    <span>{tr("commentLabel")}</span>
+                    <textarea
+                      rows={2}
+                      value={draft.comment}
+                      onChange={(e) => updateDraft(item.question_id, { comment: e.target.value })}
+                    />
+                  </label>
 
-              <label>
-                <span>Difficulty vote (1-5)</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={5}
-                  value={draft.difficulty_vote}
-                  onChange={(e) => updateDraft(item.question_id, { difficulty_vote: e.target.value })}
-                />
-              </label>
+                  <label>
+                    <span>{tr("difficultyVoteLabel")}</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={5}
+                      value={draft.difficulty_vote}
+                      onChange={(e) =>
+                        updateDraft(item.question_id, { difficulty_vote: e.target.value })
+                      }
+                    />
+                  </label>
 
-              <button
-                type="button"
-                className="button"
-                disabled={isSubmitted}
-                onClick={async () => {
-                  try {
-                    await sendFeedback(item.question_id);
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : "Unexpected feedback error");
-                  }
-                }}
-              >
-                {isSubmitted ? "Sent" : "Send feedback"}
-              </button>
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={isSubmitted}
+                    onClick={async () => {
+                      try {
+                        await sendFeedback(item.question_id);
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : "Unexpected feedback error");
+                      }
+                    }}
+                  >
+                    {isSubmitted ? tr("feedbackSent") : tr("sendFeedbackCta")}
+                  </button>
+                </>
+              ) : (
+                <div className="stack">
+                  <p>{tr("feedbackRequiresLogin")}</p>
+                  <div>
+                    <Link href="/login" className="button button-link">
+                      {tr("login")}
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           </article>
         );

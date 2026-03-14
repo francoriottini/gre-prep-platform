@@ -20,7 +20,8 @@ Report privately to the maintainer with:
 - Never commit `.env.local` or production credentials.
 - Never expose `SUPABASE_SERVICE_ROLE_KEY` in client-side code.
 - Rotate Supabase keys immediately if leaked.
-- Keep `ADMIN_API_KEY` long and random.
+- Do not use shared browser admin secrets. Admin access should use Supabase auth plus membership in `public.admin_users`.
+- Prefer anon-key plus user JWT clients for authenticated user routes. Keep service role usage narrow and server-only.
 
 ## Pre-Publish Checklist
 

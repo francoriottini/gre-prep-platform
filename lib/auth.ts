@@ -1,7 +1,12 @@
-import { createSupabaseAnonServerClient } from "@/lib/supabase-server";
+import { createSupabaseAnonServerClient, createSupabaseServiceClient } from "@/lib/supabase-server";
 
 type HeaderReader = {
   get(name: string): string | null;
+};
+
+export type AuthenticatedRequest = {
+  accessToken: string;
+  userId: string;
 };
 
 export function extractBearerToken(headers: HeaderReader): string | null {
@@ -9,32 +14,42 @@ export function extractBearerToken(headers: HeaderReader): string | null {
   if (!authHeader) {
     return null;
   }
+
   const [scheme, token] = authHeader.split(" ");
   if (scheme?.toLowerCase() !== "bearer" || !token) {
     return null;
   }
+
   return token.trim();
 }
 
-export async function getAuthenticatedUserId(headers: HeaderReader): Promise<string | null> {
-  const token = extractBearerToken(headers);
-  if (!token) {
+export async function getAuthenticatedRequest(
+  headers: HeaderReader
+): Promise<AuthenticatedRequest | null> {
+  const accessToken = extractBearerToken(headers);
+  if (!accessToken) {
     return null;
   }
 
   const supabase = createSupabaseAnonServerClient();
-  const { data, error } = await supabase.auth.getUser(token);
+  const { data, error } = await supabase.auth.getUser(accessToken);
   if (error || !data.user) {
     return null;
   }
-  return data.user.id;
+
+  return {
+    accessToken,
+    userId: data.user.id
+  };
 }
 
-export function isAdminRequest(headers: HeaderReader): boolean {
-  const expected = process.env.ADMIN_API_KEY;
-  if (!expected) {
-    return false;
-  }
-  const provided = headers.get("x-admin-key");
-  return provided === expected;
+export async function isAdminUser(userId: string): Promise<boolean> {
+  const supabase = createSupabaseServiceClient();
+  const { data, error } = await supabase
+    .from("admin_users")
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return !error && Boolean(data);
 }

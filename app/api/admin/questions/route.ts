@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isAdminRequest } from "@/lib/auth";
+import { getAuthenticatedRequest, isAdminUser } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase-server";
 
 const updateSchema = z.object({
@@ -11,7 +11,8 @@ const updateSchema = z.object({
 });
 
 export async function GET(request: Request) {
-  if (!isAdminRequest(request.headers)) {
+  const auth = await getAuthenticatedRequest(request.headers);
+  if (!auth || !(await isAdminUser(auth.userId))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -40,7 +41,8 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  if (!isAdminRequest(request.headers)) {
+  const auth = await getAuthenticatedRequest(request.headers);
+  if (!auth || !(await isAdminUser(auth.userId))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

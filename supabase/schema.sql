@@ -11,6 +11,11 @@ create table if not exists public.user_profiles (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.admin_users (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
 -- Questions bank (private, only server-side access)
 create table if not exists public.questions (
   id uuid primary key default gen_random_uuid(),
@@ -125,6 +130,7 @@ for each row execute function public.set_updated_at();
 
 -- RLS
 alter table public.user_profiles enable row level security;
+alter table public.admin_users enable row level security;
 alter table public.questions enable row level security;
 alter table public.quiz_attempts enable row level security;
 alter table public.attempt_items enable row level security;
@@ -153,6 +159,13 @@ for update
 to authenticated
 using (id = auth.uid())
 with check (id = auth.uid());
+
+drop policy if exists admin_users_select_own on public.admin_users;
+create policy admin_users_select_own
+on public.admin_users
+for select
+to authenticated
+using (user_id = auth.uid());
 
 -- questions table is private for client roles; only service role should read/write
 drop policy if exists questions_no_access_auth on public.questions;
@@ -249,4 +262,14 @@ create policy feedback_insert_own
 on public.item_feedback
 for insert
 to authenticated
-with check (user_id = auth.uid());
+with check (
+  user_id = auth.uid()
+  and (
+    attempt_id is null
+    or exists (
+      select 1 from public.quiz_attempts qa
+      where qa.id = item_feedback.attempt_id
+        and qa.user_id = auth.uid()
+    )
+  )
+);
